@@ -43,6 +43,7 @@ bool checkAdjacent(Piece a, Piece b, char orientation) {
 
 int displayPossibleRotation(Piece a, Piece b) {
     int nb = 0;
+    std::cout <<
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             if (isPossible(a.at(i), b.at(j))) {
