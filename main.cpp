@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include "pieces.h"
+#include <algorithm>
 
 enum class Orientation {
     A, B, C, D
@@ -9,8 +10,6 @@ enum class Orientation {
 enum class Side {
     TOP, RIGHT, DOWN, LEFT
 };
-
-int total = 0;
 
 
 bool isCompatible(AttachementType a, AttachementType b) {
@@ -58,9 +57,8 @@ public:
 
     std::string getOrientationName() const;
 
-    int getPosInList() const;
+    std::string toString() const;
 
-    void setPosInList(int posInList);
 
 private:
     int position;
@@ -70,12 +68,11 @@ private:
     AttachementType left;
     int number;
     Orientation orientation;
-    int posInList;
 };
 
 PuzzlePiece::PuzzlePiece(Piece list, int number) : top(list.at(0)), right(list.at(1)), down(list.at(2)),
                                                    left(list.at(3)), number(number), position(-1),
-                                                   orientation(Orientation::A), posInList(number - 1) {}
+                                                   orientation(Orientation::A) {}
 
 AttachementType PuzzlePiece::getSide(Side side, Orientation orientation) const {
     switch (orientation) {
@@ -191,13 +188,10 @@ std::string PuzzlePiece::getOrientationName() const {
     return output;
 }
 
-int PuzzlePiece::getPosInList() const {
-    return posInList;
+std::string PuzzlePiece::toString() const {
+    return std::to_string(number) + getOrientationName();
 }
 
-void PuzzlePiece::setPosInList(int posInList) {
-    PuzzlePiece::posInList = posInList;
-}
 
 PuzzlePiece *getPieceArPosition(std::vector<PuzzlePiece> &list, int position) {
     for (auto &i : list) {
@@ -288,27 +282,9 @@ int getEmptyPositionCount(const std::vector<PuzzlePiece> &list) {
     return output;
 }
 
-PuzzlePiece *permutation(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
-    if (indexA == indexB) {
-        return &list.at(indexA);
-    }
-    PuzzlePiece temp = list.at(indexA);
-    list.at(indexA) = list.at(indexB);
-    list.at(indexA).setPosInList(indexA);
-    list.at(indexB) = temp;
-    list.at(indexB).setPosInList(indexB);
-    return &list.at(indexA);
-}
 
-void permutationElement(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
-    if (indexA == indexB) {
-        return;
-    }
-    PuzzlePiece temp = list.at(indexA);
-    list.at(indexA) = list.at(indexB);
-    list.at(indexB) = temp;
-}
-
+std::vector<PuzzlePiece> list;
+std::vector<std::string> l;
 
 bool solution(std::vector<PuzzlePiece> &list, int position) {
     static int tries;
@@ -340,12 +316,20 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
 
     while (hasPossibilities) {
         current->setPosition(position);
-
         std::vector<Orientation> PossibleOrientation = possibleOrientation(list, *current);
         for (Orientation orientation : PossibleOrientation) {
             current->setOrientation(orientation);
             if (getEmptyPositionCount(list) == 0) {
-                return true;
+                std::string ls;
+                for (int k = 1; k <= 9; ++k) {
+                    for (const PuzzlePiece p : list) {
+                        if (p.getPosition() != k) {
+                            continue;
+                        }
+                        ls += p.toString() + " ";
+                    }
+                }
+                l.push_back(ls);
             } else {
                 bool test = solution(list, position + 1);
                 if (test) {
@@ -355,13 +339,8 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
         }
 
         current->setPosition(-1);
-        std::vector<PuzzlePiece *> free2 = free;
-        free.clear();
-        for (auto &i : free2) {
-            if (i->getNumber() != current->getNumber()) {
-                free.push_back(i);
-            }
-        }
+        free.erase(free.begin());
+
         hasPossibilities = !free.empty();
         if (!hasPossibilities) {
             return false;
@@ -369,89 +348,20 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
         current = free.at(0);
     }
     return false;
-
-
 }
-
-void permuter(std::vector<PuzzlePiece> &list, int a) {
-    if (a == 1) {
-        ++total;
-        if (solution(list, 1)) {
-            for (int j = 1; j <= 9; ++j) {
-                for (const PuzzlePiece p : list) {
-                    if (p.getPosition() != j) {
-                        continue;
-                    }
-                    std::string bb = std::to_string(p.getNumber());
-                    bb += p.getOrientationName();
-                    bb += " ";
-                    std::cout << bb;
-                }
-            }
-        }
-        for (PuzzlePiece &p : list) {
-            p.setPosition(-1);
-            p.setOrientation(Orientation::A);
-        }
-        std::cout << std::endl;
-
-    } else {
-        for (int i = 0; i < a; ++i) {
-            permutationElement(list, i, a);
-            permuter(list, a - 1);
-            permutationElement(list, i, a);
-        }
-
-        permuter(list, a - 1);
-    }
-}
-
-#include <algorithm>
 
 int main() {
-    std::vector<PuzzlePiece> list;
+
     int nb = 1;
     for (Piece p : PIECES) {
         list.emplace_back(p, nb++);
     }
-    // permuter(list, 8);
-    std::vector<std::string> l;
-    for (int i = 0; i < 9; ++i) {
-        for (int j = 8; j >= 0; --j) {
-            permutationElement(list, i, j);
-            ++total;
-            if (solution(list, 1)) {
-                std::string ls;
-                for (int k = 1; k <= 9; ++k) {
-                    for (const PuzzlePiece p : list) {
-                        if (p.getPosition() != k) {
-                            continue;
-                        }
-                        std::string bb = std::to_string(p.getNumber());
-                        bb += p.getOrientationName();
-                        bb += " ";
-                        //  std::cout <<bb;
-                        ls += bb;
-                    }
+    solution(list, 1);
 
-                }
-                if (std::find(l.begin(), l.end(), ls) == l.end()) {
-                    l.push_back(ls);
-                }
-                //      std::cout << std::endl;
-            }
-            for (PuzzlePiece &p : list) {
-                p.setPosition(-1);
-                p.setOrientation(Orientation::A);
-            }
-            permutationElement(list, i, j);
-        }
-    }
     for (const std::string &s : l) {
         std::cout << s << std::endl;
     }
+    std::cout << "total " << l.size() << std::endl << std::endl;
 
-
-    std::cout << "total " << total;
 
 }
