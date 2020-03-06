@@ -120,14 +120,14 @@ private:
 
 PuzzlePiece::PuzzlePiece(Piece list, int number) : number(number), position(-1),
                                                    orientation(Orientation::A) {
-    attachement[0]=list.at(0);
-    attachement[1]=list.at(1);
-    attachement[2]=list.at(2);
-    attachement[3]=list.at(3);
+    attachement[0] = list.at(0);
+    attachement[1] = list.at(1);
+    attachement[2] = list.at(2);
+    attachement[3] = list.at(3);
 }
 
 inline AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
-    return attachement[(((int) orientation+(int) side)%4)];
+    return attachement[(((int) orientation + (int) side) % 4)];
 }
 
 bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
@@ -153,8 +153,7 @@ bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
     } else {
         return false;
     }
-    return isCompatible(this->getAttachementTypeOnSide(ownSide),
-                        piece.getAttachementTypeOnSide(pieceSide));
+    return isCompatible(this->getAttachementTypeOnSide(ownSide), piece.getAttachementTypeOnSide(pieceSide));
 }
 
 void PuzzlePiece::setOrientation(Orientation orientation) {
@@ -175,7 +174,7 @@ std::string getOrientationName(Orientation orientation) {
         case Orientation::A:
             return "a";
         case Orientation::B:
-            return"b";
+            return "b";
         case Orientation::C:
             return "c";
         case Orientation::D:
@@ -188,8 +187,13 @@ std::string PuzzlePiece::toString() const {
     return std::to_string(number) + getOrientationName(orientation);
 }
 
-
-PuzzlePiece *getPieceArPosition(std::vector<PuzzlePiece> &list, int position) {
+/**
+ * Get the puzzlePiece with a given position
+ * @param list a vector of puzzlePiece to look for
+ * @param position the position to find
+ * @return a pointer to the puzzlePiece if found, a nullptr otherwise
+ */
+PuzzlePiece *getPieceAtPosition(std::vector<PuzzlePiece> &list, int position) {
     for (auto &i : list) {
         if (i.getPosition() == position) {
             return &i;
@@ -199,7 +203,7 @@ PuzzlePiece *getPieceArPosition(std::vector<PuzzlePiece> &list, int position) {
 }
 
 /**
- *
+ * Get the position of adjacent
  * @param position
  * @return a vector with the position of the adjacent pieces
  */
@@ -208,21 +212,16 @@ std::vector<int> getAllAdjacent(int position) {
     --position;
     for (int i = -1; i < 2; ++i) {
         for (int j = -1; j < 2; ++j) {
-            if (abs(i) == abs(j)) {
+
+            if (abs(i) == abs(j) || (i == -1 && position % 3 == 0) || (i == 1 && position % 3 == 2)) {
                 continue;
             }
-            if (i == -1 and position % 3 == 0) {
+            // avoid computing it two times
+            int side = floor(position / 3);
+            if ((j == -1 && side == 0) || (j == 1 && side == 2)) {
                 continue;
             }
-            if (i == 1 and position % 3 == 2) {
-                continue;
-            }
-            if (j == -1 and floor(position / 3) == 0) {
-                continue;
-            }
-            if (j == 1 and floor(position / 3) == 2) {
-                continue;
-            }
+
             int test = position + i + j * 3;
             if (test >= 0 && test < 9) {
                 output.push_back(test + 1);
@@ -232,7 +231,12 @@ std::vector<int> getAllAdjacent(int position) {
     return output;
 }
 
-
+/**
+ *
+ * @param list
+ * @param piece
+ * @return
+ */
 std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
     std::vector<int> neighbours = getAllAdjacent(piece.getPosition());
     std::vector<Orientation> output;
@@ -241,7 +245,7 @@ std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, Puz
          orientation <= Orientation::D; orientation = (Orientation) ((int) orientation + 1)) {
         bool isValid = true;
         for (int n : neighbours) {
-            PuzzlePiece *pie = getPieceArPosition(list, n);
+            PuzzlePiece *pie = getPieceAtPosition(list, n);
             if (pie == nullptr) {
                 continue;
             }
@@ -314,7 +318,9 @@ int main() {
     int nb = 1;
     for (Piece p : PIECES) {
         list.emplace_back(p, nb++);
+
     }
+
 
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     solution(list, 1);
