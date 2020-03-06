@@ -1,17 +1,31 @@
 #include <iostream>
 #include <cmath>
 #include "pieces.h"
-#include <algorithm>
+#include <chrono>
 
+using namespace std::chrono;
+
+/**
+ * Orientation of the piece, A is the standard orientation
+ */
 enum class Orientation {
     A, B, C, D
 };
 
+/**
+ * Side of the piece in Orientation A
+ */
 enum class Side {
     TOP, RIGHT, DOWN, LEFT
 };
 
 
+/**
+ * Check if an attachment can be next to another
+ * @param a A first  AttachementType to check
+ * @param b A second AttachementType to check
+ * @return true if compatible, false otherwise
+ */
 bool isCompatible(AttachementType a, AttachementType b) {
     switch (a) {
         case FILLE_HAUT:
@@ -37,6 +51,10 @@ bool isCompatible(AttachementType a, AttachementType b) {
     }
 }
 
+/**
+ * A piece of the puzzle
+ * consist of a number, a position, an orientation and 4 attachments
+ */
 class PuzzlePiece {
 public:
     PuzzlePiece(Piece list, int number);
@@ -51,10 +69,6 @@ public:
 
     void setPosition(int position);
 
-    int getNumber() const;
-
-    Orientation getOrientation() const;
-
     std::string getOrientationName() const;
 
     std::string toString() const;
@@ -62,65 +76,21 @@ public:
 
 private:
     int position;
-    AttachementType top;
-    AttachementType right;
-    AttachementType down;
-    AttachementType left;
-    int number;
+    const int number;
+    AttachementType attachement[4];
     Orientation orientation;
 };
 
-PuzzlePiece::PuzzlePiece(Piece list, int number) : top(list.at(0)), right(list.at(1)), down(list.at(2)),
-                                                   left(list.at(3)), number(number), position(-1),
-                                                   orientation(Orientation::A) {}
+PuzzlePiece::PuzzlePiece(Piece list, int number) : number(number), position(-1),
+                                                   orientation(Orientation::A) {
+    attachement[0]=list.at(0);
+    attachement[1]=list.at(1);
+    attachement[2]=list.at(2);
+    attachement[3]=list.at(3);
+}
 
-AttachementType PuzzlePiece::getSide(Side side, Orientation orientation) const {
-    switch (orientation) {
-        case Orientation::A:
-            switch (side) {
-                case Side::TOP:
-                    return top;
-                case Side::RIGHT:
-                    return right;
-                case Side::DOWN:
-                    return down;
-                case Side::LEFT:
-                    return left;
-            }
-        case Orientation::B:
-            switch (side) {
-                case Side::TOP:
-                    return right;
-                case Side::RIGHT:
-                    return down;
-                case Side::DOWN:
-                    return left;
-                case Side::LEFT:
-                    return top;
-            }
-        case Orientation::C:
-            switch (side) {
-                case Side::TOP:
-                    return down;
-                case Side::RIGHT:
-                    return left;
-                case Side::DOWN:
-                    return top;
-                case Side::LEFT:
-                    return right;
-            }
-        case Orientation::D:
-            switch (side) {
-                case Side::TOP:
-                    return left;
-                case Side::RIGHT:
-                    return top;
-                case Side::DOWN:
-                    return right;
-                case Side::LEFT:
-                    return down;
-            }
-    }
+inline AttachementType PuzzlePiece::getSide(Side side, Orientation orientation) const {
+    return attachement[(((int) orientation+(int) side)%4)];
 }
 
 bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
@@ -161,13 +131,6 @@ void PuzzlePiece::setPosition(int position) {
     this->position = position;
 }
 
-int PuzzlePiece::getNumber() const {
-    return number;
-}
-
-Orientation PuzzlePiece::getOrientation() const {
-    return orientation;
-}
 
 std::string PuzzlePiece::getOrientationName() const {
     std::string output;
@@ -200,13 +163,6 @@ PuzzlePiece *getPieceArPosition(std::vector<PuzzlePiece> &list, int position) {
         }
     }
     return nullptr;
-}
-
-void displayList(const std::vector<PuzzlePiece> &list) {
-    for (PuzzlePiece p : list) {
-        std::cout << p.getNumber() << " "; //<< ":" << p.getPosition()<< p.getOrientationName() << " ";
-    }
-    std::cout << std::endl;
 }
 
 /**
@@ -258,11 +214,8 @@ std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, Puz
             }
             int p = pie->getPosition();
             if (p == n) {
-                Orientation prevOr = piece.getOrientation();
                 piece.setOrientation(orientation);
                 isValid = isValid && piece.canBeNeighbour(*pie);
-                piece.setOrientation(prevOr);
-
             }
         }
         if (isValid) {
@@ -272,36 +225,10 @@ std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, Puz
     return output;
 }
 
-int getEmptyPositionCount(const std::vector<PuzzlePiece> &list) {
-    int output = 0;
-    for (const auto &i : list) {
-        if (i.getPosition() == -1) {
-            ++output;
-        }
-    }
-    return output;
-}
-
-
-std::vector<PuzzlePiece> list;
-std::vector<std::string> l;
-
 bool solution(std::vector<PuzzlePiece> &list, int position) {
-    static int tries;
-    static int nbPosition;
-    if (position == 1) {
-        tries = 0;
-    }
-    if (position == 6) {
-        ++tries;
-        --tries;
-    }
-    ++tries;
-    if (position > list.size()) {
-        return true;
-    }
+
     std::vector<PuzzlePiece *> free;
-    free.reserve(9);
+    free.reserve(list.size() - position + 1);
     for (PuzzlePiece &p : list) {
         if (p.getPosition() == -1) {
             free.push_back(&p);
@@ -312,56 +239,60 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
     if (!hasPossibilities) {
         return false;
     }
-    PuzzlePiece *current = free.at(0);
+    // last one to avoid moving elements
+    PuzzlePiece *current = free.back();
 
     while (hasPossibilities) {
         current->setPosition(position);
         std::vector<Orientation> PossibleOrientation = possibleOrientation(list, *current);
         for (Orientation orientation : PossibleOrientation) {
             current->setOrientation(orientation);
-            if (getEmptyPositionCount(list) == 0) {
-                std::string ls;
-                for (int k = 1; k <= 9; ++k) {
+            if (position == list.size()) {
+                for (int k = 0; k < list.size(); ++k) {
                     for (const PuzzlePiece p : list) {
                         if (p.getPosition() != k) {
                             continue;
                         }
-                        ls += p.toString() + " ";
+                        std::cout << p.toString() << " ";
                     }
                 }
-                l.push_back(ls);
+                std::cout << std::endl;
             } else {
-                bool test = solution(list, position + 1);
-                if (test) {
+                if (solution(list, position + 1)) {
                     return true;
                 }
             }
         }
 
         current->setPosition(-1);
-        free.erase(free.begin());
+        free.pop_back();
 
         hasPossibilities = !free.empty();
         if (!hasPossibilities) {
             return false;
         }
-        current = free.at(0);
+        current = free.back();
     }
     return false;
 }
 
 int main() {
-
+    std::vector<PuzzlePiece> list;
     int nb = 1;
     for (Piece p : PIECES) {
         list.emplace_back(p, nb++);
     }
-    solution(list, 1);
 
-    for (const std::string &s : l) {
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    solution(list, 1);
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+//calcul du temps, ici en nanosecondes
+    double temps = duration_cast<nanoseconds>(t2 - t1).count();
+    std::cout << temps << std::endl;
+    /*for (const std::string &s : l) {
         std::cout << s << std::endl;
     }
-    std::cout << "total " << l.size() << std::endl << std::endl;
+    std::cout << "total " << l.size() << std::endl << std::endl;*/
 
 
 }
