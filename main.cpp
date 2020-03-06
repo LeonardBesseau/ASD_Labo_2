@@ -13,6 +13,12 @@ enum class Orientation {
 };
 
 /**
+  * Get the name of the orientation in a human readable format
+  * @return a string containing the name of the orientation
+  */
+std::string getOrientationName(Orientation orientation);
+
+/**
  * Side of the piece in Orientation A
  */
 enum class Side {
@@ -67,30 +73,48 @@ public:
     PuzzlePiece(Piece list, int number);
 
     /**
-     * Get the AttachementType on a given size with a given orientation
+     * Get the AttachementType on a given size based on the current orientation
      * @param side The side of the attachement to get with the current orientation
-     * @return
+     * @return an AttachementType
      * @example (TOP,B) will return the attachementType that was on the right side in orientation A
      */
     AttachementType getAttachementTypeOnSide(Side side) const;
 
+    /**
+     * Set the orientation of the piece
+     */
     void setOrientation(Orientation orientation1);
 
+    /**
+     * Verify if a piece can be a neighbour to another piece based on their compatibility
+     * @param piece the piece to verify the compatibility with
+     * @return true if the two piece can be neighbour, false otherwise
+     */
     bool canBeNeighbour(const PuzzlePiece &piece) const;
 
+    /**
+     * Get the position of the piece
+     * @return an integer with the position
+     */
     int getPosition() const;
 
+    /**
+     * Set the position of the piece
+     * @param position the new position of the piece
+     */
     void setPosition(int position);
 
-    std::string getOrientationName() const;
-
+    /**
+     * Get a description of the piece in a human readable format
+     * @return a string with the number of the piece and its orientation
+     */
     std::string toString() const;
 
 
 private:
     int position;
     const int number;
-    AttachementType attachement[4];
+    AttachementType attachement[4]{};
     Orientation orientation;
 };
 
@@ -146,27 +170,22 @@ void PuzzlePiece::setPosition(int position) {
 }
 
 
-std::string PuzzlePiece::getOrientationName() const {
-    std::string output;
+std::string getOrientationName(Orientation orientation) {
     switch (orientation) {
         case Orientation::A:
-            output = "a";
-            break;
+            return "a";
         case Orientation::B:
-            output = "b";
-            break;
+            return"b";
         case Orientation::C:
-            output = "c";
-            break;
+            return "c";
         case Orientation::D:
-            output = "d";
-            break;
+            return "d";
     }
-    return output;
+
 }
 
 std::string PuzzlePiece::toString() const {
-    return std::to_string(number) + getOrientationName();
+    return std::to_string(number) + getOrientationName(orientation);
 }
 
 
