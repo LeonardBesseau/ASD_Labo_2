@@ -57,9 +57,22 @@ bool isCompatible(AttachementType a, AttachementType b) {
  */
 class PuzzlePiece {
 public:
+    /**
+     * Create a piece with a number and attachments
+     * @details position is initialized at -1 and orientation at A
+     * @param list a vector of AttachementType
+     * @param number the unique number of the list
+     * @attention no verification is made for the uniqueness of the number
+     */
     PuzzlePiece(Piece list, int number);
 
-    AttachementType getSide(Side side, Orientation orientation) const;
+    /**
+     * Get the AttachementType on a given size with a given orientation
+     * @param side The side of the attachement to get with the current orientation
+     * @return
+     * @example (TOP,B) will return the attachementType that was on the right side in orientation A
+     */
+    AttachementType getAttachementTypeOnSide(Side side) const;
 
     void setOrientation(Orientation orientation1);
 
@@ -89,7 +102,7 @@ PuzzlePiece::PuzzlePiece(Piece list, int number) : number(number), position(-1),
     attachement[3]=list.at(3);
 }
 
-inline AttachementType PuzzlePiece::getSide(Side side, Orientation orientation) const {
+inline AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
     return attachement[(((int) orientation+(int) side)%4)];
 }
 
@@ -116,7 +129,8 @@ bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
     } else {
         return false;
     }
-    return isCompatible(this->getSide(ownSide, this->orientation), piece.getSide(pieceSide, piece.orientation));
+    return isCompatible(this->getAttachementTypeOnSide(ownSide),
+                        piece.getAttachementTypeOnSide(pieceSide));
 }
 
 void PuzzlePiece::setOrientation(Orientation orientation) {
