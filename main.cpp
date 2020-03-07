@@ -5,6 +5,7 @@
 
 using namespace std::chrono;
 
+// Number of piece per line and columns
 const int size = 3;
 
 /**
@@ -13,8 +14,6 @@ const int size = 3;
 enum class Orientation {
     A, B, C, D
 };
-
-constexpr std::initializer_list<Orientation> all_E = {Orientation::A, Orientation::B, Orientation::C, Orientation::D};
 
 /**
   * Get the name of the orientation in a human readable format
@@ -114,7 +113,6 @@ public:
      */
     std::string toString() const;
 
-
 private:
     int position;
     int number;
@@ -192,21 +190,6 @@ std::string PuzzlePiece::toString() const {
 }
 
 /**
- * Get the puzzlePiece with a given position
- * @param list a vector of puzzlePiece to look for
- * @param position the position to find
- * @return a pointer to the puzzlePiece if found, a nullptr otherwise
- */
-PuzzlePiece *getPieceAtPosition(std::vector<PuzzlePiece> &list, int position) {
-    for (auto &i : list) {
-        if (i.getPosition() == position) {
-            return &i;
-        }
-    }
-    return nullptr;
-}
-
-/**
  * Get the position of adjacent
  * @param position a integer for a position
  * @return a vector with the position of the adjacent pieces
@@ -245,16 +228,18 @@ std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, Puz
     for (Orientation orientation = Orientation::A;
          orientation <= Orientation::D; orientation = (Orientation) ((int) orientation + 1)) {
         bool isValid = true;
+
         for (int neighbour : neighbours) {
-            PuzzlePiece *test = getPieceAtPosition(list, neighbour);
-            if (test == nullptr) {
+            PuzzlePiece &test = list.at(neighbour - 1);
+
+            if (test.getPosition() == -1) {
                 continue;
             }
-            if (test->getPosition() == neighbour) {
-                piece.setOrientation(orientation);
-                isValid = isValid && piece.canBeNeighbour(*test);
-            }
+
+            piece.setOrientation(orientation);
+            isValid = isValid && piece.canBeNeighbour(test);
         }
+
         if (isValid) {
             output.push_back(orientation);
         }
@@ -262,6 +247,22 @@ std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, Puz
     return output;
 }
 
+/**
+ * Permute two element between them
+ * @param list a vector of a puzzlePiece containg the element to swap
+ * @param indexA an integer the index of the first element to swap
+ * @param indexB an integer the index of the second element to swap
+ * @return a pointer to the new element at indexA
+ */
+PuzzlePiece *permutationElement(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
+    if (indexA == indexB) {
+        return &list.at(indexA);
+    }
+    PuzzlePiece temp = list.at(indexA);
+    list.at(indexA) = list.at(indexB);
+    list.at(indexB) = temp;
+    return &list.at(indexA);
+}
 
 /**
  * Solve and display all the solution of the puzzle
@@ -270,34 +271,30 @@ std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, Puz
  * @return a boolean (only used in the recursion to indicate if a path is impossible)
  */
 bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
+    //All possible piece for this position
+    std::vector<PuzzlePiece *> possiblePiece;
+    possiblePiece.reserve(list.size() - position + 1);
+    for (int i = position - 1; i < list.size(); ++i) {
+        possiblePiece.push_back(&list.at(i));
+    }
 
-    std::vector<PuzzlePiece *> free;
-    free.reserve(list.size() - position + 1);
-    for (PuzzlePiece &p : list) {
-        if (p.getPosition() == -1) {
-            free.push_back(&p);
-        }
-    }
-    free.shrink_to_fit();
-    if (free.empty()) {
-        return false;
-    }
     // last one to avoid moving elements
-    PuzzlePiece *current = free.back();
+    PuzzlePiece *current = possiblePiece.back();
+    // number of tries for this piece used to avoid permuting two wrong element
+    int tries = 0;
 
     while (true) {
         current->setPosition(position);
-        std::vector<Orientation> PossibleOrientation = getValidOrientation(list, *current);
-        for (Orientation orientation : PossibleOrientation) {
+        // Put piece tested at the corresponding position in the array
+        current = permutationElement(list, position - 1, list.size() - 1 - tries);
+
+        std::vector<Orientation> validOrientation = getValidOrientation(list, *current);
+        for (Orientation orientation : validOrientation) {
             current->setOrientation(orientation);
+            // If last piece display solution
             if (position == list.size()) {
-                for (int k = 0; k < list.size(); ++k) {
-                    for (const PuzzlePiece p : list) {
-                        if (p.getPosition() != k) {
-                            continue;
-                        }
-                        std::cout << p.toString() << " ";
-                    }
+                for (const PuzzlePiece p : list) {
+                    std::cout << p.toString() << " ";
                 }
                 std::cout << std::endl;
             } else {
@@ -306,14 +303,17 @@ bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
         }
 
         current->setPosition(-1);
-        free.pop_back();
+        // Put piece tested at the end of the array but before previously tested piece for this position
+        permutationElement(list, position - 1, list.size() - 1 - tries);
+        ++tries;
+        // remove piece tested
+        possiblePiece.pop_back();
 
-        if (free.empty()) {
+        if (possiblePiece.empty()) {
             return false;
         }
-        current = free.back();
+        current = possiblePiece.back();
     }
-    return false;
 }
 
 int main() {
@@ -324,17 +324,11 @@ int main() {
 
     }
 
-
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     solution(list);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
-//calcul du temps, ici en nanosecondes
     double temps = duration_cast<nanoseconds>(t2 - t1).count();
-    std::cout << temps << std::endl;
-    /*for (const std::string &s : l) {
-        std::cout << s << std::endl;
-    }
-    std::cout << "total " << l.size() << std::endl << std::endl;*/
+    std::cout << temps / 1000000 << std::endl;
 
 
 }
