@@ -133,27 +133,24 @@ inline AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
 }
 
 bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
-    int d = position - piece.position;
     Side ownSide;
     Side pieceSide;
-    if (abs(d) == 1 && std::floor((piece.position - 1) / 3) == std::floor((position - 1) / 3)) {
-        if (d == 1) {
-            ownSide = Side::LEFT;
-            pieceSide = Side::RIGHT;
-        } else {
-            ownSide = Side::RIGHT;
-            pieceSide = Side::LEFT;
-        }
-    } else if (abs(d) == 3) {
-        if (d == 3) {
-            ownSide = Side::TOP;
-            pieceSide = Side::DOWN;
-        } else {
-            ownSide = Side::DOWN;
-            pieceSide = Side::TOP;
-        }
-    } else {
+    int x = (position - 1) % size - (piece.position - 1) % size;
+    int y = (position - 1) / size - (piece.position - 1) / size;
+    if (x == y) {
         return false;
+    } else if (x == -1) {
+        ownSide = Side::RIGHT;
+        pieceSide = Side::LEFT;
+    } else if (x == 1) {
+        ownSide = Side::LEFT;
+        pieceSide = Side::RIGHT;
+    } else if (y == -1) {
+        ownSide = Side::DOWN;
+        pieceSide = Side::TOP;
+    } else if (y == 1) {
+        ownSide = Side::TOP;
+        pieceSide = Side::DOWN;
     }
     return isCompatible(this->getAttachementTypeOnSide(ownSide), piece.getAttachementTypeOnSide(pieceSide));
 }
@@ -323,6 +320,7 @@ int main() {
         list.emplace_back(p, nb++);
 
     }
+
 
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     solution(list);
