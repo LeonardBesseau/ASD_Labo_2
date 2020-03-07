@@ -14,6 +14,8 @@ enum class Orientation {
     A, B, C, D
 };
 
+constexpr std::initializer_list<Orientation> all_E = {Orientation::A, Orientation::B, Orientation::C, Orientation::D};
+
 /**
   * Get the name of the orientation in a human readable format
   * @return a string containing the name of the orientation
@@ -115,7 +117,7 @@ public:
 
 private:
     int position;
-    const int number;
+    int number;
     AttachementType attachement[4]{};
     Orientation orientation;
 };
@@ -206,33 +208,15 @@ PuzzlePiece *getPieceAtPosition(std::vector<PuzzlePiece> &list, int position) {
 
 /**
  * Get the position of adjacent
- * @param position
+ * @param position a integer for a position
  * @return a vector with the position of the adjacent pieces
  */
 std::vector<int> getAllAdjacent(int position) {
     std::vector<int> output;
-    --position;/*
-    for (int i = -1; i < 2; ++i) {
-        for (int j = -1; j < 2; ++j) {
-
-            if (abs(i) == abs(j) || (i == -1 && position % 3 == 0) || (i == 1 && position % 3 == 2)) {
-                continue;
-            }
-            // avoid computing it two times
-            int side = floor(position / 3);
-            if ((j == -1 && side == 0) || (j == 1 && side == 2)) {
-                continue;
-            }
-
-            int test = position + i + j * 3;
-            if (test >= 0 && test < 9) {
-                output.push_back(test + 1);
-            }
-        }
-
-    }*/
+    --position;
     int x = position % size;
     int y = position / size;
+
     if (x - 1 >= 0) {
         output.push_back(x + y * size);
     }
@@ -249,27 +233,26 @@ std::vector<int> getAllAdjacent(int position) {
 }
 
 /**
- *
- * @param list
- * @param piece
- * @return
+ * Get a list of the possible orientation for a given piece depending of the piece already present on the board
+ * @param list a vector of puzzlePiece containing the puzzle
+ * @param piece the piece to test
+ * @return a vector of orientation. Is empty if the piece doesn't match at all
  */
-std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
+std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
     std::vector<int> neighbours = getAllAdjacent(piece.getPosition());
     std::vector<Orientation> output;
 
     for (Orientation orientation = Orientation::A;
          orientation <= Orientation::D; orientation = (Orientation) ((int) orientation + 1)) {
         bool isValid = true;
-        for (int n : neighbours) {
-            PuzzlePiece *pie = getPieceAtPosition(list, n);
-            if (pie == nullptr) {
+        for (int neighbour : neighbours) {
+            PuzzlePiece *test = getPieceAtPosition(list, neighbour);
+            if (test == nullptr) {
                 continue;
             }
-            int p = pie->getPosition();
-            if (p == n) {
+            if (test->getPosition() == neighbour) {
                 piece.setOrientation(orientation);
-                isValid = isValid && piece.canBeNeighbour(*pie);
+                isValid = isValid && piece.canBeNeighbour(*test);
             }
         }
         if (isValid) {
@@ -279,7 +262,14 @@ std::vector<Orientation> possibleOrientation(std::vector<PuzzlePiece> &list, Puz
     return output;
 }
 
-bool solution(std::vector<PuzzlePiece> &list, int position) {
+
+/**
+ * Solve and display all the solution of the puzzle
+ * @param list a vector of puzzlePiece containing the puzzle
+ * @param position the position of the puzzle to test (default is one for the starting position)
+ * @return a boolean (only used in the recursion to indicate if a path is impossible)
+ */
+bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
 
     std::vector<PuzzlePiece *> free;
     free.reserve(list.size() - position + 1);
@@ -289,16 +279,15 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
         }
     }
     free.shrink_to_fit();
-    bool hasPossibilities = !free.empty();
-    if (!hasPossibilities) {
+    if (free.empty()) {
         return false;
     }
     // last one to avoid moving elements
     PuzzlePiece *current = free.back();
 
-    while (hasPossibilities) {
+    while (true) {
         current->setPosition(position);
-        std::vector<Orientation> PossibleOrientation = possibleOrientation(list, *current);
+        std::vector<Orientation> PossibleOrientation = getValidOrientation(list, *current);
         for (Orientation orientation : PossibleOrientation) {
             current->setOrientation(orientation);
             if (position == list.size()) {
@@ -312,17 +301,14 @@ bool solution(std::vector<PuzzlePiece> &list, int position) {
                 }
                 std::cout << std::endl;
             } else {
-                if (solution(list, position + 1)) {
-                    return true;
-                }
+                solution(list, position + 1);
             }
         }
 
         current->setPosition(-1);
         free.pop_back();
 
-        hasPossibilities = !free.empty();
-        if (!hasPossibilities) {
+        if (free.empty()) {
             return false;
         }
         current = free.back();
@@ -338,9 +324,9 @@ int main() {
 
     }
 
-/*
+
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    solution(list, 1);
+    solution(list);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
 //calcul du temps, ici en nanosecondes
     double temps = duration_cast<nanoseconds>(t2 - t1).count();
