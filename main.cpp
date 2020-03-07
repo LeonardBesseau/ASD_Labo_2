@@ -5,6 +5,8 @@
 
 using namespace std::chrono;
 
+const int size = 3;
+
 /**
  * Orientation of the piece, A is the standard orientation
  */
@@ -209,7 +211,7 @@ PuzzlePiece *getPieceAtPosition(std::vector<PuzzlePiece> &list, int position) {
  */
 std::vector<int> getAllAdjacent(int position) {
     std::vector<int> output;
-    --position;
+    --position;/*
     for (int i = -1; i < 2; ++i) {
         for (int j = -1; j < 2; ++j) {
 
@@ -227,6 +229,21 @@ std::vector<int> getAllAdjacent(int position) {
                 output.push_back(test + 1);
             }
         }
+
+    }*/
+    int x = position % size;
+    int y = position / size;
+    if (x - 1 >= 0) {
+        output.push_back(x + y * size);
+    }
+    if (x + 1 < size) {
+        output.push_back(x + 2 + y * size);
+    }
+    if (y - 1 >= 0) {
+        output.push_back(x + 1 + (y - 1) * size);
+    }
+    if (y + 1 < size) {
+        output.push_back(x + 1 + (y + 1) * size);
     }
     return output;
 }
@@ -321,7 +338,7 @@ int main() {
 
     }
 
-
+/*
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     solution(list, 1);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
