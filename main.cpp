@@ -8,6 +8,7 @@ using namespace std::chrono;
 // Number of piece per line and columns
 const int size = 3;
 
+
 /**
  * Orientation of the piece, A is the standard orientation
  */
@@ -128,7 +129,7 @@ PuzzlePiece::PuzzlePiece(Piece list, int number) : number(number), position(-1),
     attachement[3] = list.at(3);
 }
 
-inline AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
+AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
     return attachement[(((int) orientation + (int) side) % 4)];
 }
 
@@ -179,7 +180,6 @@ std::string getOrientationName(Orientation orientation) {
         case Orientation::D:
             return "d";
     }
-
 }
 
 std::string PuzzlePiece::toString() const {
@@ -215,11 +215,14 @@ std::vector<int> getAllAdjacent(int position) {
 /**
  * Get a list of the possible orientation for a given piece depending of the piece already present on the board
  * @param list a vector of puzzlePiece containing the puzzle
+ * @param neighboursPosition a vector of vector containing the position of adjacent piece for each piece
  * @param piece the piece to test
  * @return a vector of orientation. Is empty if the piece doesn't match at all
  */
-std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
-    std::vector<int> neighbours = getAllAdjacent(piece.getPosition());
+std::vector<Orientation>
+getValidOrientation(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &neighboursPosition,
+                    PuzzlePiece &piece) {
+    std::vector<int> neighbours = neighboursPosition.at(piece.getPosition() - 1);
     std::vector<Orientation> output;
 
     for (Orientation orientation = Orientation::A;
@@ -251,7 +254,7 @@ std::vector<Orientation> getValidOrientation(std::vector<PuzzlePiece> &list, Puz
  * @param indexB an integer the index of the second element to swap
  * @return a pointer to the new element at indexA
  */
-PuzzlePiece *permutationElement(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
+PuzzlePiece *swapElement(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
     if (indexA == indexB) {
         return &list.at(indexA);
     }
@@ -264,10 +267,12 @@ PuzzlePiece *permutationElement(std::vector<PuzzlePiece> &list, int indexA, int 
 /**
  * Solve and display all the solution of the puzzle
  * @param list a vector of puzzlePiece containing the puzzle
+ * @param neighboursPosition a vector of vector containing the position of adjacent piece for each piece
  * @param position the position of the puzzle to test (default is one for the starting position)
  * @return a boolean (only used in the recursion to indicate if a path is impossible)
  */
-bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
+bool
+solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &neighboursPosition, int position = 1) {
     //All possible piece for this position
     std::vector<PuzzlePiece *> possiblePiece;
     possiblePiece.reserve(list.size() - position + 1);
@@ -283,9 +288,9 @@ bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
     while (true) {
         current->setPosition(position);
         // Put piece tested at the corresponding position in the array
-        current = permutationElement(list, position - 1, list.size() - 1 - tries);
+        current = swapElement(list, position - 1, list.size() - 1 - tries);
 
-        std::vector<Orientation> validOrientation = getValidOrientation(list, *current);
+        std::vector<Orientation> validOrientation = getValidOrientation(list, neighboursPosition, *current);
         for (Orientation orientation : validOrientation) {
             current->setOrientation(orientation);
             // If last piece display solution
@@ -295,13 +300,13 @@ bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
                 }
                 std::cout << std::endl;
             } else {
-                solution(list, position + 1);
+                solution(list, neighboursPosition, position + 1);
             }
         }
 
         current->setPosition(-1);
         // Put piece tested at the end of the array but before previously tested piece for this position
-        permutationElement(list, position - 1, list.size() - 1 - tries);
+        swapElement(list, position - 1, list.size() - 1 - tries);
         ++tries;
         // remove piece tested
         possiblePiece.pop_back();
@@ -314,16 +319,21 @@ bool solution(std::vector<PuzzlePiece> &list, int position = 1) {
 }
 
 int main() {
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
     std::vector<PuzzlePiece> list;
+
     int nb = 1;
     for (Piece p : PIECES) {
         list.emplace_back(p, nb++);
 
     }
+    std::vector<std::vector<int>> neighboursPosition(list.size());
+    for (int i = 0; i < list.size(); ++i) {
+        neighboursPosition.at(i) = (getAllAdjacent(i + 1));
+    }
 
 
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    solution(list);
+    solution(list, neighboursPosition);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     double temps = duration_cast<nanoseconds>(t2 - t1).count();
     std::cout << temps / 1000000 << std::endl;
