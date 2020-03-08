@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cmath>
 #include "pieces.h"
 #include <chrono>
 
@@ -8,19 +7,6 @@ using namespace std::chrono;
 // Number of piece per line and columns
 const int size = 3;
 
-
-/**
- * Orientation of the piece, A is the standard orientation
- */
-enum class Orientation {
-    A, B, C, D
-};
-
-/**
-  * Get the name of the orientation in a human readable format
-  * @return a string containing the name of the orientation
-  */
-std::string getOrientationName(Orientation orientation);
 
 /**
  * Side of the piece in Orientation A
@@ -54,8 +40,6 @@ bool isCompatible(AttachementType a, AttachementType b) {
             return b == GATEAU_DROIT;
         case GATEAU_DROIT:
             return b == GATEAU_GAUCHE;
-        case ARROSOIR_INVERSE:
-        case NONE:
         default:
             return false;
     }
@@ -66,6 +50,8 @@ bool isCompatible(AttachementType a, AttachementType b) {
  * consist of a number, a position, an orientation and 4 attachments
  */
 class PuzzlePiece {
+    friend std::ostream &operator<<(std::ostream &lhs, const PuzzlePiece &rhs);
+
 public:
     /**
      * Create a piece with a number and attachments
@@ -87,7 +73,7 @@ public:
     /**
      * Set the orientation of the piece
      */
-    void setOrientation(Orientation orientation1);
+    void setOrientation(char orientation);
 
     /**
      * Verify if a piece can be a neighbour to another piece based on their compatibility
@@ -108,29 +94,18 @@ public:
      */
     void setPosition(int position);
 
-    /**
-     * Get a description of the piece in a human readable format
-     * @return a string with the number of the piece and its orientation
-     */
-    std::string toString() const;
-
 private:
     int position;
     int number;
-    AttachementType attachement[4]{};
-    Orientation orientation;
+    Piece attachement;
+    char orientation;
 };
 
-PuzzlePiece::PuzzlePiece(Piece list, int number) : number(number), position(-1),
-                                                   orientation(Orientation::A) {
-    attachement[0] = list.at(0);
-    attachement[1] = list.at(1);
-    attachement[2] = list.at(2);
-    attachement[3] = list.at(3);
-}
+PuzzlePiece::PuzzlePiece(Piece list, int number) : attachement(list), number(number), position(-1),
+                                                   orientation('a') {}
 
 AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
-    return attachement[(((int) orientation + (int) side) % 4)];
+    return attachement.at(((orientation - 'a' + (int) side) % 4));
 }
 
 bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
@@ -156,7 +131,7 @@ bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
     return isCompatible(this->getAttachementTypeOnSide(ownSide), piece.getAttachementTypeOnSide(pieceSide));
 }
 
-void PuzzlePiece::setOrientation(Orientation orientation) {
+void PuzzlePiece::setOrientation(char orientation) {
     this->orientation = orientation;
 }
 
@@ -168,22 +143,8 @@ void PuzzlePiece::setPosition(int position) {
     this->position = position;
 }
 
-
-std::string getOrientationName(Orientation orientation) {
-    switch (orientation) {
-        case Orientation::A:
-            return "a";
-        case Orientation::B:
-            return "b";
-        case Orientation::C:
-            return "c";
-        case Orientation::D:
-            return "d";
-    }
-}
-
-std::string PuzzlePiece::toString() const {
-    return std::to_string(number) + getOrientationName(orientation);
+std::ostream &operator<<(std::ostream &lhs, const PuzzlePiece &rhs) {
+    return lhs << rhs.number << rhs.orientation;
 }
 
 /**
@@ -219,14 +180,13 @@ std::vector<int> getAllAdjacent(int position) {
  * @param piece the piece to test
  * @return a vector of orientation. Is empty if the piece doesn't match at all
  */
-std::vector<Orientation>
+std::vector<char>
 getValidOrientation(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &neighboursPosition,
                     PuzzlePiece &piece) {
     std::vector<int> neighbours = neighboursPosition.at(piece.getPosition() - 1);
-    std::vector<Orientation> output;
+    std::vector<char> output;
 
-    for (Orientation orientation = Orientation::A;
-         orientation <= Orientation::D; orientation = (Orientation) ((int) orientation + 1)) {
+    for (char orientation = 'a'; orientation <= 'd'; ++orientation) {
         bool isValid = true;
 
         for (int neighbour : neighbours) {
@@ -290,13 +250,13 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
         // Put piece tested at the corresponding position in the array
         current = swapElement(list, position - 1, list.size() - 1 - tries);
 
-        std::vector<Orientation> validOrientation = getValidOrientation(list, neighboursPosition, *current);
-        for (Orientation orientation : validOrientation) {
+        std::vector<char> validOrientation = getValidOrientation(list, neighboursPosition, *current);
+        for (char orientation : validOrientation) {
             current->setOrientation(orientation);
             // If last piece display solution
             if (position == list.size()) {
                 for (const PuzzlePiece p : list) {
-                    std::cout << p.toString() << " ";
+                    std::cout << p << " ";
                 }
                 std::cout << std::endl;
             } else {
@@ -332,11 +292,10 @@ int main() {
         neighboursPosition.at(i) = (getAllAdjacent(i + 1));
     }
 
-
     solution(list, neighboursPosition);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
-    double temps = duration_cast<nanoseconds>(t2 - t1).count();
-    std::cout << temps / 1000000 << std::endl;
+    double temps = duration_cast<milliseconds>(t2 - t1).count();
+    std::cout << temps << std::endl;
 
 
 }
