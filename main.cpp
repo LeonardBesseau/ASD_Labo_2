@@ -7,14 +7,12 @@ using namespace std::chrono;
 // Number of piece per line and columns
 const int size = 3;
 
-
 /**
  * Side of the piece in Orientation A
  */
 enum class Side {
     TOP, RIGHT, DOWN, LEFT
 };
-
 
 /**
  * Check if an attachment can be next to another
@@ -113,20 +111,23 @@ bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
     Side pieceSide;
     int x = (position - 1) % size - (piece.position - 1) % size;
     int y = (position - 1) / size - (piece.position - 1) / size;
-    if (x == y) {
+
+    if (x == y) { // No diagonals
         return false;
-    } else if (x == -1) {
+    } else if (x == -1) { // Right
         ownSide = Side::RIGHT;
         pieceSide = Side::LEFT;
-    } else if (x == 1) {
+    } else if (x == 1) { // Left
         ownSide = Side::LEFT;
         pieceSide = Side::RIGHT;
-    } else if (y == -1) {
+    } else if (y == -1) { // DOWN
         ownSide = Side::DOWN;
         pieceSide = Side::TOP;
-    } else if (y == 1) {
+    } else if (y == 1) { // UP
         ownSide = Side::TOP;
         pieceSide = Side::DOWN;
+    } else {
+        return false;
     }
     return isCompatible(this->getAttachementTypeOnSide(ownSide), piece.getAttachementTypeOnSide(pieceSide));
 }
@@ -208,23 +209,6 @@ getValidOrientation(std::vector<PuzzlePiece> &list, const std::vector<std::vecto
 }
 
 /**
- * Permute two element between them
- * @param list a vector of a puzzlePiece containg the element to swap
- * @param indexA an integer the index of the first element to swap
- * @param indexB an integer the index of the second element to swap
- * @return a pointer to the new element at indexA
- */
-PuzzlePiece *swapElement(std::vector<PuzzlePiece> &list, int indexA, int indexB) {
-    if (indexA == indexB) {
-        return &list.at(indexA);
-    }
-    PuzzlePiece temp = list.at(indexA);
-    list.at(indexA) = list.at(indexB);
-    list.at(indexB) = temp;
-    return &list.at(indexA);
-}
-
-/**
  * Solve and display all the solution of the puzzle
  * @param list a vector of puzzlePiece containing the puzzle
  * @param neighboursPosition a vector of vector containing the position of adjacent piece for each piece
@@ -248,7 +232,8 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
     while (true) {
         current->setPosition(position);
         // Put piece tested at the corresponding position in the array
-        current = swapElement(list, position - 1, list.size() - 1 - tries);
+        std::swap(list.at(position - 1), list.at(list.size() - 1 - tries));
+        current = &list.at(position - 1);
 
         std::vector<char> validOrientation = getValidOrientation(list, neighboursPosition, *current);
         for (char orientation : validOrientation) {
@@ -266,7 +251,7 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
 
         current->setPosition(-1);
         // Put piece tested at the end of the array but before previously tested piece for this position
-        swapElement(list, position - 1, list.size() - 1 - tries);
+        std::swap(list.at(position - 1), list.at(list.size() - 1 - tries));
         ++tries;
         // remove piece tested
         possiblePiece.pop_back();
@@ -281,7 +266,7 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
 int main() {
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     std::vector<PuzzlePiece> list;
-
+    list.reserve(size * size);
     int nb = 1;
     for (Piece p : PIECES) {
         list.emplace_back(p, nb++);
@@ -296,6 +281,5 @@ int main() {
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     double temps = duration_cast<milliseconds>(t2 - t1).count();
     std::cout << temps << std::endl;
-
 
 }
