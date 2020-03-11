@@ -76,7 +76,7 @@ public:
     /**
      * Verify if a piece can be a neighbour to another piece based on their compatibility
      * @param piece the piece to verify the compatibility with
-     * @param the side on which to put the piece
+     * @param the side on which to put the piece (Only on the left or Top side)
      * @return true if the two piece can be neighbour, false otherwise
      */
     bool canBeNeighbour(const PuzzlePiece &piece, Side side) const;
@@ -140,7 +140,6 @@ std::ostream &operator<<(std::ostream &lhs, const PuzzlePiece &rhs) {
 /**
  * Get a list of the possible orientation for a given piece depending of the piece already present on the board
  * @param list a vector of puzzlePiece containing the puzzle
- * @param neighboursPosition a vector of vector containing the position of adjacent piece for each piece
  * @param piece the piece to test
  * @return a vector of orientation. Is empty if the piece doesn't match at all
  */
@@ -149,8 +148,10 @@ getValidOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
     std::vector<char> output;
     int position = piece.getPosition();
     --position;
+
     int posLeft = position % size > 0 ? position - 1 : -1;
     int posTop = position >= size ? position - size : -1;
+
     for (char orientation = 'a'; orientation <= 'd'; ++orientation) {
         piece.setOrientation(orientation);
         if (posLeft != -1) {
@@ -172,7 +173,6 @@ getValidOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
 /**
  * Solve and display all the solution of the puzzle
  * @param list a vector of puzzlePiece containing the puzzle
- * @param neighboursPosition a vector of vector containing the position of adjacent piece for each piece
  * @param position the position of the puzzle to test (default is one for the starting position)
  * @return a boolean (only used in the recursion to indicate if a path is impossible)
  */
@@ -194,9 +194,11 @@ solution(std::vector<PuzzlePiece> &list, int position = 1) {
         current->setPosition(position);
         // Put piece tested at the corresponding position in the array
         std::swap(list.at(position - 1), list.at(list.size() - 1 - tries));
+        // Set the pointer to the correct element
         current = &list.at(position - 1);
 
         std::vector<char> validOrientation = getValidOrientation(list, *current);
+
         for (char orientation : validOrientation) {
             current->setOrientation(orientation);
             // If last piece display solution
@@ -214,7 +216,7 @@ solution(std::vector<PuzzlePiece> &list, int position = 1) {
         // Put piece tested at the end of the array but before previously tested piece for this position
         std::swap(list.at(position - 1), list.at(list.size() - 1 - tries));
         ++tries;
-        // remove piece tested
+
         possiblePiece.pop_back();
 
         if (possiblePiece.empty()) {
@@ -228,9 +230,8 @@ int main() {
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     std::vector<PuzzlePiece> list;
     list.reserve(size * size);
-    int nb = 1;
-    for (Piece p : PIECES) {
-        list.emplace_back(p, nb++);
+    for (int i = 0; i < PIECES.size(); ++i) {
+        list.emplace_back(PIECES.at(i), i + 1);
 
     }
 
