@@ -76,9 +76,10 @@ public:
     /**
      * Verify if a piece can be a neighbour to another piece based on their compatibility
      * @param piece the piece to verify the compatibility with
+     * @param the side on which to put the piece
      * @return true if the two piece can be neighbour, false otherwise
      */
-    bool canBeNeighbour(const PuzzlePiece &piece) const;
+    bool canBeNeighbour(const PuzzlePiece &piece, Side side) const;
 
     /**
      * Get the position of the piece
@@ -106,28 +107,15 @@ AttachementType PuzzlePiece::getAttachementTypeOnSide(Side side) const {
     return attachement.at(((orientation - 'a' + (int) side) % 4));
 }
 
-bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece) const {
+bool PuzzlePiece::canBeNeighbour(const PuzzlePiece &piece, Side side) const {
     Side ownSide;
     Side pieceSide;
-    int x = (position - 1) % size - (piece.position - 1) % size;
-    int y = (position - 1) / size - (piece.position - 1) / size;
-
-    if (x == y) { // No diagonals
-        return false;
-    } else if (x == -1) { // Right
-        ownSide = Side::RIGHT;
-        pieceSide = Side::LEFT;
-    } else if (x == 1) { // Left
+    if (side == Side::LEFT) {
         ownSide = Side::LEFT;
         pieceSide = Side::RIGHT;
-    } else if (y == -1) { // DOWN
-        ownSide = Side::DOWN;
-        pieceSide = Side::TOP;
-    } else if (y == 1) { // UP
+    } else { // UP
         ownSide = Side::TOP;
         pieceSide = Side::DOWN;
-    } else {
-        return false;
     }
     return isCompatible(this->getAttachementTypeOnSide(ownSide), piece.getAttachementTypeOnSide(pieceSide));
 }
@@ -148,31 +136,6 @@ std::ostream &operator<<(std::ostream &lhs, const PuzzlePiece &rhs) {
     return lhs << rhs.number << rhs.orientation;
 }
 
-/**
- * Get the position of adjacent
- * @param position a integer for a position
- * @return a vector with the position of the adjacent pieces
- */
-std::vector<int> getAllAdjacent(int position) {
-    std::vector<int> output;
-    --position;
-    int x = position % size;
-    int y = position / size;
-
-    if (x - 1 >= 0) {
-        output.push_back(x + y * size);
-    }
-    if (x + 1 < size) {
-        output.push_back(x + 2 + y * size);
-    }
-    if (y - 1 >= 0) {
-        output.push_back(x + 1 + (y - 1) * size);
-    }
-    if (y + 1 < size) {
-        output.push_back(x + 1 + (y + 1) * size);
-    }
-    return output;
-}
 
 /**
  * Get a list of the possible orientation for a given piece depending of the piece already present on the board
@@ -182,28 +145,26 @@ std::vector<int> getAllAdjacent(int position) {
  * @return a vector of orientation. Is empty if the piece doesn't match at all
  */
 std::vector<char>
-getValidOrientation(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &neighboursPosition,
-                    PuzzlePiece &piece) {
-    std::vector<int> neighbours = neighboursPosition.at(piece.getPosition() - 1);
+getValidOrientation(std::vector<PuzzlePiece> &list, PuzzlePiece &piece) {
     std::vector<char> output;
-
+    int position = piece.getPosition();
+    --position;
+    int posLeft = position % size > 0 ? position - 1 : -1;
+    int posTop = position >= size ? position - size : -1;
     for (char orientation = 'a'; orientation <= 'd'; ++orientation) {
-        bool isValid = true;
-
-        for (int neighbour : neighbours) {
-            PuzzlePiece &test = list.at(neighbour - 1);
-
-            if (test.getPosition() == -1) {
+        piece.setOrientation(orientation);
+        if (posLeft != -1) {
+            if (!piece.canBeNeighbour(list.at(posLeft), Side::LEFT)) {
                 continue;
             }
 
-            piece.setOrientation(orientation);
-            isValid = isValid && piece.canBeNeighbour(test);
         }
-
-        if (isValid) {
-            output.push_back(orientation);
+        if (posTop != -1) {
+            if (!piece.canBeNeighbour(list.at(posTop), Side::TOP)) {
+                continue;
+            }
         }
+        output.push_back(orientation);
     }
     return output;
 }
@@ -216,7 +177,7 @@ getValidOrientation(std::vector<PuzzlePiece> &list, const std::vector<std::vecto
  * @return a boolean (only used in the recursion to indicate if a path is impossible)
  */
 bool
-solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &neighboursPosition, int position = 1) {
+solution(std::vector<PuzzlePiece> &list, int position = 1) {
     //All possible piece for this position
     std::vector<PuzzlePiece *> possiblePiece;
     possiblePiece.reserve(list.size() - position + 1);
@@ -235,7 +196,7 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
         std::swap(list.at(position - 1), list.at(list.size() - 1 - tries));
         current = &list.at(position - 1);
 
-        std::vector<char> validOrientation = getValidOrientation(list, neighboursPosition, *current);
+        std::vector<char> validOrientation = getValidOrientation(list, *current);
         for (char orientation : validOrientation) {
             current->setOrientation(orientation);
             // If last piece display solution
@@ -245,7 +206,7 @@ solution(std::vector<PuzzlePiece> &list, const std::vector<std::vector<int>> &ne
                 }
                 std::cout << std::endl;
             } else {
-                solution(list, neighboursPosition, position + 1);
+                solution(list, position + 1);
             }
         }
 
@@ -272,12 +233,8 @@ int main() {
         list.emplace_back(p, nb++);
 
     }
-    std::vector<std::vector<int>> neighboursPosition(list.size());
-    for (int i = 0; i < list.size(); ++i) {
-        neighboursPosition.at(i) = (getAllAdjacent(i + 1));
-    }
 
-    solution(list, neighboursPosition);
+    solution(list);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     double temps = duration_cast<milliseconds>(t2 - t1).count();
     std::cout << temps << std::endl;
