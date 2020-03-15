@@ -1,8 +1,18 @@
+/* ---------------------------
+Laboratoire :
+Fichier : main.cpp
+Auteur(s) : Besseau Zwick Viotti
+Date : 16-03-2020
+
+But : Le but de ce laboratoire consiste à trouver toutes les solutions au jeu décrit sur la page suivante: https://asd1-heigvd.github.io/ASD1-Labs/puzzle/
+
+Remarque(s) :
+
+Compilateur : gcc version 7.4.0
+
+--------------------------- */
 #include <iostream>
 #include "pieces.h"
-#include <chrono>
-
-using namespace std::chrono;
 
 // Number of piece per line and columns
 const int size = 3;
@@ -227,7 +237,6 @@ solution(std::vector<PuzzlePiece> &list, int position = 1) {
 }
 
 int main() {
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
     std::vector<PuzzlePiece> list;
     list.reserve(size * size);
     for (int i = 0; i < PIECES.size(); ++i) {
@@ -236,8 +245,5 @@ int main() {
     }
 
     solution(list);
-    high_resolution_clock::time_point t2 = high_resolution_clock::now();
-    double temps = duration_cast<milliseconds>(t2 - t1).count();
-    std::cout << temps << std::endl;
 
 }
